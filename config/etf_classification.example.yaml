@@ -8,25 +8,38 @@
 # =============================================================================
 
 equity:
+  # broad / core
   - SPY      # SPDR S&P 500
-  - QQQ      # Invesco QQQ (NASDAQ-100)
+  - VOO      # Vanguard S&P 500
+  - IVV      # iShares Core S&P 500
+  - VTI      # Vanguard Total US Market
+  - QQQ      # Invesco QQQ (NASDAQ-100)  [source gated -> stays ballast]
   - IWM      # iShares Russell 2000
-  - VGK      # Vanguard FTSE Europe
+  - DIA      # SPDR Dow Jones
   - EFA      # iShares MSCI EAFE
   - EEM      # iShares MSCI Emerging Markets
-  - XLF      # Financial Select Sector SPDR
-  - XLE      # Energy Select Sector SPDR
-  - XLK      # Technology Select Sector SPDR
-  - VNQ      # Vanguard Real Estate
+  # growth / tech / semis
+  - VGT      # Vanguard Information Technology
+  - VUG      # Vanguard Growth
+  - IWF      # iShares Russell 1000 Growth
+  - IYW      # iShares US Technology
+  - XLK      # Technology Select SPDR
+  - SMH      # VanEck Semiconductor
+  - SOXX     # iShares Semiconductor
+  # sector SPDRs
+  - XLF      # Financials
+  - XLE      # Energy
+  - XLV      # Health Care
+  - XLI      # Industrials
+  - XLY      # Consumer Discretionary
+  - XLP      # Consumer Staples
+  - XLU      # Utilities
+  - XLC      # Communication Services
+  - XLRE     # Real Estate
   - XBI      # SPDR S&P Biotech
 
-commodity:
-  - GLD      # SPDR Gold Shares — physical gold, not an equity basket
-
 crypto:
-  - BTC      # Bitcoin (merged IBIT + CBTC) -> coin spot
-  - ETHA     # iShares Ethereum Trust -> ETH spot
-  - BITO     # ProShares Bitcoin Strategy (futures) -> crypto exposure
-  - BSOL     # Bitwise Solana Staking -> SOL spot
+  - IBIT     # iShares Bitcoin Trust -> BTC spot
 
+commodity: []
 not_a_fund: []

@@ -12,8 +12,11 @@ matrix theory, and reports how many real factors you hold, which holdings secret
 your economic factor exposure, and how the whole thing behaves in a crisis — end to end,
 reproducibly, with every matrix carrying its own honesty labels.
 
-> This repository ships a **fictional 250-holding, 20-sector example portfolio**
-> (`examples/portfolio_example.csv`) so the entire pipeline runs out of the box. No real
+> This repository ships a **fictional ~150-instrument, 20-sector example portfolio**
+> (`examples/portfolio_example.csv`) so the entire pipeline runs out of the box — every
+> ticker is a liquid US listing that prices cleanly, and **25 of its ETFs have live
+> holdings sources**, so look-through really bites (it reveals, e.g., that broad S&P
+> funds held several times over quietly triple your true NVIDIA/Apple exposure). No real
 > data is included. To analyse your own book, see [Using your own data](#using-your-own-data).
 
 ### What it deliberately does NOT do
