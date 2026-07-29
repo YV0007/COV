@@ -7,10 +7,18 @@
 # A fund with no usable entry is reported "no source" and left as ballast.
 # =============================================================================
 sources:
-  # Two real, public issuer files so look-through actually demonstrates:
-  IWM: { issuer: iShares, filetype: csv,  url: "https://www.ishares.com/us/products/239710/ishares-russell-2000-etf/latest-holdings.csv" }
-  XBI: { issuer: SSGA,    filetype: xlsx, url: "https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-xbi.xlsx" }
+  # Real, public issuer files (live-verified) so look-through actually demonstrates.
+  # State Street / SPDR — XLSX:
+  SPY: { issuer: SSGA, filetype: xlsx, url: "https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx" }
+  XLF: { issuer: SSGA, filetype: xlsx, url: "https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-xlf.xlsx" }
+  XLE: { issuer: SSGA, filetype: xlsx, url: "https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-xle.xlsx" }
+  XLK: { issuer: SSGA, filetype: xlsx, url: "https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-xlk.xlsx" }
+  XBI: { issuer: SSGA, filetype: xlsx, url: "https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-xbi.xlsx" }
+  # iShares — CSV (/latest-holdings.csv; only the product id matters):
+  IWM: { issuer: iShares, filetype: csv, url: "https://www.ishares.com/us/products/239710/ishares-russell-2000-etf/latest-holdings.csv" }
+  EFA: { issuer: iShares, filetype: csv, url: "https://www.ishares.com/us/products/239623/ishares-msci-eafe-etf/latest-holdings.csv" }
+  EEM: { issuer: iShares, filetype: csv, url: "https://www.ishares.com/us/products/239637/ishares-msci-emerging-markets-etf/latest-holdings.csv" }
 
-  # Others left un-wired (they stay honest ballast until a source is added):
-  # SPY: { issuer: SSGA,    filetype: xlsx, url: "..." }
-  # QQQ: { issuer: Invesco, filetype: csv,  path: "data/raw/holdings/manual/QQQ.csv" }  # bot-gated -> manual drop
+  # Left un-wired (honest ballast until a source is added):
+  # QQQ: { issuer: Invesco, filetype: csv, path: "data/raw/holdings/manual/QQQ.csv" }  # bot-gated -> manual drop
+  # VGK / VNQ (Vanguard) -> JSON API; add like the Vanguard example in the docs.
