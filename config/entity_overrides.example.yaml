@@ -1,0 +1,38 @@
+# =============================================================================
+# EXAMPLE entity-resolution overrides — for the shipped example portfolio.
+# Copy to config/entity_overrides.yaml (gitignored) and edit for your own book.
+# Default resolution groups rows by ISIN (else normalized ticker); this file
+# encodes the exceptions that rule gets wrong.
+# =============================================================================
+
+# --- merges: distinct source lines that are the SAME economic exposure --------
+merges:
+  ASML:
+    canonical_id: ASML
+    canonical_name: ASML Holding NV
+    instrument_type: equity
+    match_isin: [NL0010273215, USN070592100]   # Amsterdam ord + US ADR (1:1)
+    shares_additive: true
+    note: "Amsterdam ordinary + US ADR — one economic exposure"
+
+  BTC:
+    canonical_id: BTC
+    canonical_name: Bitcoin (spot, via ETP wrappers)
+    instrument_type: etp
+    match_isin: [US46438F1012, CHCBTCCH0000]     # IBIT + 21Shares Bitcoin Core ETP
+    shares_additive: false                       # different wrappers -> shares not additive
+    note: "IBIT + CBTC both spot Bitcoin — net MV, shares not additive"
+
+# --- renames: break a canonical_id (ticker slug) collision --------------------
+renames: []
+
+# --- keep_separate: must NOT merge (share classes, overloaded tickers) ---------
+keep_separate:
+  - isins: [US02079K3059, US02079K1079]          # Alphabet Class A vs Class C
+    reason: "Different share classes (GOOGL vs GOOG) — distinct instruments"
+  - isins: [US0970231058, GB0002634946]          # Boeing vs BAE Systems
+    reason: "Ticker 'BA' can collide — Boeing (US) vs BAE (GB); resolve by ISIN"
+
+# --- data_quality_notes: known bad/suspect rows a human flagged ---------------
+# Keyed by raw_id. Surfaced into the book's resolution_notes; never auto-fixed.
+data_quality_notes: {}

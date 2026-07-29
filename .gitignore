@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment / secrets
+.env
+
+# Logs
+logs/
+*.log
+
+# Data — never commit client data, fetched market data, or the DuckDB warehouse.
+# Keep only the folder skeleton (via .gitkeep); ignore all contents.
+/data/**
+!/data/**/
+!/data/**/.gitkeep
+
+# Generated reports & charts — contain REAL portfolio figures (holdings, dollar
+# amounts, exposures). Never commit; keep only the folder skeleton.
+/reports/output/*
+!/reports/output/.gitkeep
+
+# Your REAL portfolio config — reveals actual holdings. Keep local; the public repo
+# ships config/*.example.yaml templates instead. Copy an example to activate.
+/config/entity_overrides.yaml
+/config/symbol_overrides.yaml
+/config/constituent_overrides.yaml
+/config/etf_classification.yaml
+/config/etf_holdings_sources.yaml
+
+# OS
+.DS_Store
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/

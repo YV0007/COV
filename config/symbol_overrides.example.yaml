@@ -1,0 +1,16 @@
+# =============================================================================
+# EXAMPLE Yahoo-symbol overrides — canonical_id -> Yahoo symbol fixes.
+# Copy to config/symbol_overrides.yaml (gitignored) for your own book.
+# Most symbols resolve automatically (ticker + a suffix from the ISIN country);
+# this file only lists the exceptions the auto-rule gets wrong.
+# =============================================================================
+symbols:
+  # French names whose base ticker collides with a US ticker in the sheet:
+  SUFR: { symbol: SU.PA }        # Schneider Electric (SU collides with Suncor)
+  SANFR: { symbol: SAN.PA }      # Sanofi (SAN collides with Santander)
+  # Asian listings need the exchange suffix:
+  "7203": { symbol: 7203.T }     # Toyota Motor (Tokyo)
+  # ADRs / thin lines you prefer to map explicitly:
+  # ESLT: { symbol: ESLT }
+  # A line you intentionally leave unmapped (never faked):
+  # SOMEILLIQUID: { symbol: null }

@@ -1,0 +1,16 @@
+# =============================================================================
+# EXAMPLE ETF holdings-source registry (Phase 3) — for the example portfolio.
+# Copy to config/etf_holdings_sources.yaml (gitignored) for your own book.
+#   url       : direct download ({date}=YYYYMMDD walked back from the run date)
+#   path      : local file to read instead of a url (for gated funds)
+#   filetype  : csv | xlsx | xls | json   (header row auto-detected)
+# A fund with no usable entry is reported "no source" and left as ballast.
+# =============================================================================
+sources:
+  # Two real, public issuer files so look-through actually demonstrates:
+  IWM: { issuer: iShares, filetype: csv,  url: "https://www.ishares.com/us/products/239710/ishares-russell-2000-etf/latest-holdings.csv" }
+  XBI: { issuer: SSGA,    filetype: xlsx, url: "https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-xbi.xlsx" }
+
+  # Others left un-wired (they stay honest ballast until a source is added):
+  # SPY: { issuer: SSGA,    filetype: xlsx, url: "..." }
+  # QQQ: { issuer: Invesco, filetype: csv,  path: "data/raw/holdings/manual/QQQ.csv" }  # bot-gated -> manual drop

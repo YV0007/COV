@@ -1,0 +1,16 @@
+# =============================================================================
+# COV — constituent resolution overrides (Phase 3 look-through)
+# =============================================================================
+# The look-through resolver maps each ETF constituent onto the book's canonical_id
+# space by ISIN -> ticker -> name. This file is the manual escape hatch for the
+# cases that rule gets wrong — e.g. a constituent listed under a local ticker that
+# should collapse onto an instrument we hold under a different one, or a dual-listed
+# name the automatic match splits.
+#
+# Format: identifier (ISIN or TICKER, upper-case) -> canonical_id it must resolve to.
+# Populated as real holdings CSVs reveal mismatches; empty is fine (rule-only).
+# =============================================================================
+overrides: {}
+  # Example (uncomment/edit against real data):
+  # US0378331005: AAPL      # any constituent with Apple's ISIN -> our AAPL line
+  # NESN: NESN              # Nestlé local ticker -> our canonical Nestlé

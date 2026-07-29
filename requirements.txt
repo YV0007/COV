@@ -1,0 +1,34 @@
+# --- Core engine ---
+numpy>=1.26
+pandas>=2.2
+scipy>=1.13
+
+# --- Stats / ML (Phases 4-7) ---
+scikit-learn>=1.4      # LedoitWolf, OAS, PCA, clustering
+statsmodels>=0.14      # factor regressions
+
+# --- Storage ---
+# Parquet = append-only system of record; DuckDB = SQL query layer over it +
+# home for small hand-edited reference tables. Serverless, single-folder, zero-ops.
+pyarrow>=15.0          # parquet read/write
+duckdb>=1.0            # query engine over parquet + reference tables
+
+# --- Data sources (abstracted behind fetcher interfaces) ---
+yfinance>=0.2.40       # prices (start; swappable)
+pandas-datareader>=0.10  # FRED (DGS10, HY OAS, USD index, oil)
+requests>=2.31         # issuer holdings CSVs, ECB FX
+openpyxl>=3.1          # Phase 3: read SPDR/VanEck .xlsx holdings files
+xlrd>=2.0              # Phase 3: read Virtus legacy .xls holdings file
+
+# --- Config ---
+PyYAML>=6.0
+
+# --- Plots (Phase 4 diagnostics onward) ---
+matplotlib>=3.8
+plotly>=5.20
+
+# --- Reporting (Phase 8) ---
+Jinja2>=3.1
+
+# --- Test harness (from day one) ---
+pytest>=8.0
