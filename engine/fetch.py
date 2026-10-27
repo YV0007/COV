@@ -1,13 +1,4 @@
-"""Phase 2, step 2 — the price fetcher (behind an interface so sources can swap).
-
-``PriceFetcher`` is the contract; ``YFinanceFetcher`` is the free default. yfinance is
-a *library* over Yahoo's data API — not a scraper and nothing is hand-ingested. We pull
-daily **auto-adjusted** close (splits + dividends folded in) per symbol, keeping the
-listing currency (taken from Yahoo, never inferred) so FX conversion is correct later.
-
-Fetches run in a small thread pool; a symbol that returns nothing is recorded as a
-failure and surfaced — never silently dropped.
-"""
+# Phase 2, step 2 — the price fetcher (behind an interface so sources can swap)
 
 from __future__ import annotations
 
@@ -21,11 +12,9 @@ logger = logging.getLogger("cov.engine.fetch")
 
 
 class PriceFetcher(ABC):
-    """Fetch daily adjusted close for one symbol. Swap this to change data source."""
-
     @abstractmethod
     def fetch_one(self, symbol: str, start: str, end: str) -> tuple[pd.DataFrame, str | None]:
-        """Return ``(DataFrame[date, close], currency)``; empty frame if not found."""
+        ...
 
 
 class YFinanceFetcher(PriceFetcher):
@@ -54,12 +43,6 @@ def fetch_prices(
     fetcher: PriceFetcher | None = None,
     max_workers: int = 6,
 ) -> tuple[pd.DataFrame, list[dict]]:
-    """Fetch every mapped symbol in ``symbols`` (skip ``kind == 'unmapped'``).
-
-    ``symbols`` has columns ``canonical_id, ticker, yahoo_symbol, kind``. Returns
-    ``(long_prices, failures)`` where ``long_prices`` has ``canonical_id, ticker,
-    yahoo_symbol, currency, date, close`` and ``failures`` lists what came back empty.
-    """
     fetcher = fetcher or YFinanceFetcher()
     todo = symbols[symbols["kind"] != "unmapped"].dropna(subset=["yahoo_symbol"])
     unmapped = symbols[symbols["kind"] == "unmapped"]

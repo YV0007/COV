@@ -1,9 +1,4 @@
-"""Logging configuration for pipeline runs.
-
-Produces a run logger that writes both to the console and to a timestamped file under
-the configured ``logs/`` directory, so every batch run leaves an auditable trail
-(point-in-time discipline applies to logs too).
-"""
+# Logging configuration for pipeline runs
 
 from __future__ import annotations
 
@@ -18,11 +13,6 @@ _DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def setup_logging(config: Config, run_id: str | None = None) -> logging.Logger:
-    """Configure and return the root ``cov`` logger for a run.
-
-    A new timestamped log file is created per run (never overwritten). ``run_id`` is
-    used in the filename when provided, otherwise a UTC timestamp is generated.
-    """
     log_cfg = config.get("logging", None)
     level_name = getattr(log_cfg, "level", "INFO") if log_cfg else "INFO"
     to_file = getattr(log_cfg, "to_file", True) if log_cfg else True
@@ -31,7 +21,7 @@ def setup_logging(config: Config, run_id: str | None = None) -> logging.Logger:
 
     logger = logging.getLogger("cov")
     logger.setLevel(level)
-    logger.handlers.clear()  # idempotent: safe to call more than once per process
+    logger.handlers.clear()
     logger.propagate = False
 
     formatter = logging.Formatter(_LOG_FORMAT, datefmt=_DATE_FORMAT)

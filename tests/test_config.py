@@ -1,4 +1,4 @@
-"""Tests for the configuration layer."""
+# Tests for the configuration layer
 
 from __future__ import annotations
 
@@ -27,9 +27,7 @@ def test_paths_are_absolute_and_rooted():
 
 def test_nested_access_works():
     cfg = load_config()
-    # attribute-style deep access
     assert cfg.covariance.windows.ewma_lambda == 0.94
-    # dict-style access on the same node
     assert cfg["covariance"]["estimator"] == "ledoit_wolf"
 
 
@@ -40,11 +38,9 @@ def test_key_parameters_present():
 
 
 def test_ensure_directories_creates_paths(tmp_path, monkeypatch):
-    # Point every configured path at a temp dir so the test is side-effect-free.
     cfg = load_config()
     for key in cfg.paths.to_dict():
         setattr(cfg.paths, key, str(tmp_path / key))
     cfg.paths._data = {k: str(tmp_path / k) for k in cfg.paths._data}
     ensure_directories(cfg)
-    # data_dir should now exist
     assert (tmp_path / "data_dir").exists()

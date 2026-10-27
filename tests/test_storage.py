@@ -1,7 +1,4 @@
-"""Tests for the storage layer (Parquet system-of-record + DuckDB query layer).
-
-Every test runs against a temp data root so nothing touches the real ``data/`` folder.
-"""
+# Tests for the storage layer (Parquet system-of-record + DuckDB query layer)
 
 from __future__ import annotations
 
@@ -16,12 +13,9 @@ from cov.storage import Storage
 
 @pytest.fixture
 def storage(tmp_path):
-    """A Storage bound to a throwaway data root under tmp_path."""
     cfg = load_config()
-    # Repoint every data path into tmp_path, preserving the relative layout.
     new_paths = {}
     for key, value in cfg.paths.to_dict().items():
-        # keep the tail (e.g. 'raw/custodian', 'warehouse.duckdb') under tmp_path
         tail = value.split("/data/", 1)[-1] if "/data/" in value else key
         new_paths[key] = str(tmp_path / "data" / tail) if key != "data_dir" else str(tmp_path / "data")
     cfg.paths._data = new_paths
@@ -51,7 +45,6 @@ def test_upsert_and_read_entity_map(storage):
     out = storage.get_entity_map()
     assert set(out["instrument_id"]) == {"BTC", "ASML"}
 
-    # Re-upsert (INSERT OR REPLACE) must not duplicate the primary key.
     storage.upsert_reference("entity_map", df.head(1))
     assert len(storage.get_entity_map()) == 2
 
@@ -77,13 +70,11 @@ def test_prices_roundtrip_append_only(storage):
     assert set(prices["ticker"]) == {"AAPL"}
     assert len(prices) == 2
 
-    # Returns panel pivots to dates x instruments.
     panel = storage.get_returns(start="2024-01-01", end="2024-12-31")
     assert "AAPL" in panel.columns and "MSFT" in panel.columns
 
 
 def test_reads_are_empty_before_any_write(storage):
-    # No parquet on disk yet -> graceful empty frames, not errors.
     assert storage.get_prices().empty
     assert storage.get_returns().empty
     assert storage.get_factors().empty

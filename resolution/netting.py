@@ -1,13 +1,4 @@
-"""Phase 1, step 3 — net across custodians and build the clean netted book.
-
-Given rows already tagged with a ``canonical_id`` (see :mod:`resolution.entity`),
-collapse them to one line per canonical instrument: sum money, sum shares only when
-share-equivalence holds, retain the contributing ``raw_id`` list for audit, flag
-funds for later look-through, and compute portfolio weights.
-
-Because netting only *sums* rows, the total market value is invariant — that is the
-Phase 1 reconciliation test (:func:`reconcile`).
-"""
+# Phase 1, step 3 — net across custodians and build the clean netted book
 
 from __future__ import annotations
 
@@ -18,7 +9,6 @@ import pandas as pd
 
 logger = logging.getLogger("cov.resolution.netting")
 
-# Final netted-book column order (the Phase 1 deliverable contract).
 BOOK_COLUMNS = [
     "canonical_id", "ticker", "isins", "name", "quantity",
     "cost_basis_usd", "market_value_usd", "weight", "sector_label",
@@ -27,8 +17,6 @@ BOOK_COLUMNS = [
 
 
 def _fund_flag(names: pd.Series, fees: pd.Series, patterns: list[str]) -> bool:
-    """A canonical is a fund/look-through candidate if any line has a fee or a
-    fund-like name (``ETF``/``Trust``/``Fund``/``ETC``)."""
     if fees.notna().any():
         return True
     pat = re.compile("|".join(re.escape(p) for p in patterns), re.IGNORECASE)
@@ -36,7 +24,6 @@ def _fund_flag(names: pd.Series, fees: pd.Series, patterns: list[str]) -> bool:
 
 
 def _mode_or_first(s: pd.Series):
-    """Most common non-null value, falling back to the first."""
     s = s.dropna()
     if s.empty:
         return None
@@ -45,12 +32,6 @@ def _mode_or_first(s: pd.Series):
 
 
 def net_book(df: pd.DataFrame, fund_patterns: list[str], dq_notes: dict) -> pd.DataFrame:
-    """Collapse resolved rows to one line per canonical instrument.
-
-    ``dq_notes`` maps ``raw_id -> note`` (hand-flagged issues). Generic flags
-    (``$0`` market value, blank ISIN, mixed sector, non-additive shares) are added
-    here so nothing is silently smoothed over.
-    """
     dq_notes = {int(k): v for k, v in (dq_notes or {}).items()}
     records = []
     for cid, g in df.groupby("canonical_id", sort=False):
@@ -87,7 +68,7 @@ def net_book(df: pd.DataFrame, fund_patterns: list[str], dq_notes: dict) -> pd.D
             "contributing_raw_ids": ",".join(str(r) for r in raw_ids),
             "is_fund": _fund_flag(g["canonical_name"], g["etf_fee_pct"], fund_patterns),
             "instrument_type": _mode_or_first(g["instrument_type"]),
-            "resolution_notes": " | ".join(dict.fromkeys(notes)),  # de-dup, keep order
+            "resolution_notes": " | ".join(dict.fromkeys(notes)),
         })
 
     book = pd.DataFrame.from_records(records)
@@ -99,12 +80,6 @@ def net_book(df: pd.DataFrame, fund_patterns: list[str], dq_notes: dict) -> pd.D
 
 
 def reconcile(book: pd.DataFrame, raw_tot: dict, target_mv: int | None, tol: float) -> dict:
-    """The Phase 1 sign-off check. Returns a result dict; logs any delta.
-
-    Always verifies the *invariant*: netted MV/cost == parsed raw totals (no rows
-    lost or duplicated). If a custodian ``target_mv`` is supplied, also reconciles
-    against it to the cent.
-    """
     net_mv = int(book["market_value_usd"].sum())
     net_cb = int(book["cost_basis_usd"].sum())
     result = {
@@ -138,10 +113,6 @@ def reconcile(book: pd.DataFrame, raw_tot: dict, target_mv: int | None, tol: flo
 
 
 def build_reference_tables(df: pd.DataFrame, book: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Derive the DuckDB reference tables (entity_map, instrument_metadata).
-
-    One row per canonical instrument, matching the schemas in ``cov/storage.py``.
-    """
     entity_rows, meta_rows = [], []
     book_by_id = book.set_index("canonical_id")
     for cid, g in df.groupby("canonical_id", sort=False):
@@ -165,9 +136,9 @@ def build_reference_tables(df: pd.DataFrame, book: pd.DataFrame) -> tuple[pd.Dat
         meta_rows.append({
             "instrument_id": cid,
             "sector_label": b["sector_label"],
-            "gics_sector": None,                       # filled in Phase 6
+            "gics_sector": None,
             "listing_country": primary_isin[:2] if primary_isin else _mode_first_exchange(g),
-            "currency": "USD",                         # base currency; all lines already USD
+            "currency": "USD",
         })
     return pd.DataFrame(entity_rows), pd.DataFrame(meta_rows)
 

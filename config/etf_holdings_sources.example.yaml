@@ -1,12 +1,6 @@
-# =============================================================================
-# EXAMPLE ETF holdings-source registry (Phase 3) — for the example portfolio.
-# Copy to config/etf_holdings_sources.yaml (gitignored) for your own book.
-#   url / filetype : csv | xlsx | json  (header row auto-detected)
-#   path           : local file instead of a url (for gated funds)
-# All 25 urls below were live-verified. A fund with no entry stays honest ballast.
-# =============================================================================
+# EXAMPLE ETF holdings-source registry (Phase 3) — for the example portfolio
+
 sources:
-  # --- State Street / SPDR (XLSX) ---------------------------------------------
   SPY:  { issuer: SSGA, filetype: xlsx, url: "https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx" }
   DIA:  { issuer: SSGA, filetype: xlsx, url: "https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-dia.xlsx" }
   XLK:  { issuer: SSGA, filetype: xlsx, url: "https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-xlk.xlsx" }
@@ -21,7 +15,6 @@ sources:
   XLRE: { issuer: SSGA, filetype: xlsx, url: "https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-xlre.xlsx" }
   XBI:  { issuer: SSGA, filetype: xlsx, url: "https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-xbi.xlsx" }
 
-  # --- iShares (CSV, /latest-holdings.csv; product id is what matters) --------
   IVV:  { issuer: iShares, filetype: csv, url: "https://www.ishares.com/us/products/239726/x/latest-holdings.csv" }
   IWM:  { issuer: iShares, filetype: csv, url: "https://www.ishares.com/us/products/239710/x/latest-holdings.csv" }
   SOXX: { issuer: iShares, filetype: csv, url: "https://www.ishares.com/us/products/239705/x/latest-holdings.csv" }
@@ -30,13 +23,9 @@ sources:
   IWF:  { issuer: iShares, filetype: csv, url: "https://www.ishares.com/us/products/239706/x/latest-holdings.csv" }
   IYW:  { issuer: iShares, filetype: csv, url: "https://www.ishares.com/us/products/239522/x/latest-holdings.csv" }
 
-  # --- Vanguard (JSON API) ----------------------------------------------------
   VOO:  { issuer: Vanguard, filetype: json, url: "https://investor.vanguard.com/investment-products/etfs/profile/api/VOO/portfolio-holding/stock" }
   VGT:  { issuer: Vanguard, filetype: json, url: "https://investor.vanguard.com/investment-products/etfs/profile/api/VGT/portfolio-holding/stock" }
   VUG:  { issuer: Vanguard, filetype: json, url: "https://investor.vanguard.com/investment-products/etfs/profile/api/VUG/portfolio-holding/stock" }
   VTI:  { issuer: Vanguard, filetype: json, url: "https://investor.vanguard.com/investment-products/etfs/profile/api/VTI/portfolio-holding/stock" }
 
-  # --- VanEck (XLSX) ----------------------------------------------------------
   SMH:  { issuer: VanEck, filetype: xlsx, url: "https://www.vaneck.com/us/en/investments/semiconductor-etf-smh/downloads/holdings/" }
-
-  # QQQ (Invesco) is bot-gated (HTTP 406) -> left as honest ballast.

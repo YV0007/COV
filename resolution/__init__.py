@@ -1,8 +1,4 @@
-"""Resolution layer — position -> instrument, entity map, netting, FX, ETF look-through.
-
-Home of Phase 1 (data model & instrument resolution) and Phase 3 (ETF look-through).
-Phase 1 is built (ingest/entity/netting); Phase 3 remains a stub.
-"""
+# Resolution layer — position -> instrument, entity map, netting, FX, ETF look-through
 
 from __future__ import annotations
 
@@ -17,57 +13,39 @@ logger = logging.getLogger("cov.resolution")
 
 
 def _cfg_path(config, value: str) -> Path:
-    """Resolve a config-relative path against the project root."""
     from config.loader import PROJECT_ROOT
     p = Path(value)
     return p if p.is_absolute() else (PROJECT_ROOT / p)
 
 
 def resolve_and_net_positions(config, ctx) -> str:
-    """Phase 1: ingest custodian sheet -> canonical instruments -> netted book.
-
-    Ingest & normalize the raw rows, resolve each to a canonical instrument via the
-    hand-maintained entity map (ASML dual ISIN, IBIT+CBTC -> BTC, BA/BAE split,
-    BMW share classes), net across custodians, flag funds, compute weights, and
-    write one clean netted book (Parquet snapshot) plus the DuckDB reference
-    tables. Reconciles the netted total against the parsed baseline to the cent.
-
-    FX is a no-op at Phase 1: the money columns are already USD (the base
-    currency). The conversion hook stays in the pipeline for future non-USD sheets.
-    """
     ing = config.ingestion
     input_file = _cfg_path(config, ing.input_file)
     overrides = entity.load_overrides(_cfg_path(config, ing.overrides_file))
 
-    # 1. ingest & normalize --------------------------------------------------
     raw = ingest.load_raw_positions(input_file, ing.exchange_prefixes)
     raw_tot = ingest.raw_totals(raw)
     logger.info("Raw baseline: %d rows, MV $%s, cost $%s",
                 raw_tot["rows"], f"{raw_tot['market_value_usd']:,}",
                 f"{raw_tot['cost_basis_usd']:,}")
 
-    # 2. entity resolution ---------------------------------------------------
     resolved = entity.resolve(raw, overrides)
 
-    # 3. net & build book ----------------------------------------------------
     dq_notes = overrides.get("data_quality_notes", {})
     book = netting.net_book(resolved, list(ing.fund_name_patterns), dq_notes)
 
-    # 4. reconcile (the Phase 1 sign-off test) -------------------------------
     recon = config.ingestion.reconciliation
     target = recon.get("statement_total_market_value_usd")
     result = netting.reconcile(book, raw_tot, target, float(recon.tolerance_usd))
     if not result["invariant_ok"]:
         return "error: reconciliation invariant failed (see log)"
 
-    # 5. persist: netted book snapshot + DuckDB reference tables -------------
     entity_map, meta = netting.build_reference_tables(resolved, book)
     run_date = ctx.started_at.strftime("%Y-%m-%d")
     book_path = ctx.storage.write_snapshot("book", run_date, book, name="netted_book")
     ctx.storage.upsert_reference("entity_map", entity_map)
     ctx.storage.upsert_reference("instrument_metadata", meta)
 
-    # hand off to later phases
     ctx.artifacts["book"] = book
     ctx.artifacts["book_path"] = book_path
     ctx.artifacts["reconciliation"] = result
@@ -80,7 +58,6 @@ def resolve_and_net_positions(config, ctx) -> str:
 
 
 def _load_constituent_overrides(path: Path) -> dict:
-    """Load the identifier->canonical_id constituent override map (empty if absent)."""
     import yaml
     if not path.exists():
         return {}
@@ -89,19 +66,6 @@ def _load_constituent_overrides(path: Path) -> dict:
 
 
 def etf_lookthrough(config, ctx) -> str:
-    """Phase 3: decompose ETFs into effective single-name exposure.
-
-    Classify each flagged fund (equity/commodity/crypto/not_a_fund), fetch issuer
-    holdings CSVs for the equity baskets, resolve every constituent onto the book's
-    canonical_id space, compute effective exposure = ETF weight x constituent weight,
-    aggregate with direct holdings, and reconcile each fund's weight to the cent.
-    Deliverable: the effective-exposure table + "declared vs. true concentration"
-    report — the first client-visible result.
-
-    Fetching is source-driven: with an empty ``etf_holdings_sources.yaml`` nothing is
-    downloaded and every equity fund is honestly reported as un-looked-through ballast.
-    Fill the registry and the look-through lights up fund by fund.
-    """
     lt = config.lookthrough
     book = ctx.artifacts.get("book")
     if book is None or len(book) == 0:
@@ -109,15 +73,10 @@ def etf_lookthrough(config, ctx) -> str:
     if book is None or len(book) == 0:
         return "error: no netted book found (run Phase 1 first)"
 
-    # 1. classify flagged funds ---------------------------------------------
     classification = lookthrough.load_classification(_cfg_path(config, lt.classification_file))
     treatments, unclassified = lookthrough.classify_funds(book, classification)
     equity_funds = [cid for cid, t in treatments.items() if t == "equity"]
 
-    # 2. fetch + normalize holdings for the equity baskets ------------------
-    # A fund may declare `proxy_of: <other_fund>` to reuse an index-equivalent fund's
-    # holdings (e.g. a gated S&P 500 tracker <- a liquid S&P 500 ETF). Proxies are resolved
-    # after the real downloads, by cloning the source fund's normalized constituents.
     from config.loader import PROJECT_ROOT
     sources = holdings_sources.load_holdings_sources(_cfg_path(config, lt.sources_file))
     proxy_map = {fid: sources[fid]["proxy_of"] for fid in equity_funds
@@ -135,7 +94,6 @@ def etf_lookthrough(config, ctx) -> str:
             logger.warning("Holdings parse failed for %s: %s", fid, exc)
             misses.append({"fund_id": fid, "reason": "parse_error"})
 
-    # resolve proxies: clone the source fund's constituents under the proxied fund_id
     for fid, src_fid in proxy_map.items():
         base = normalized.get(src_fid)
         if base is None or base.empty:
@@ -150,20 +108,17 @@ def etf_lookthrough(config, ctx) -> str:
     holdings = (pd.concat(frames, ignore_index=True)
                 if frames else pd.DataFrame(columns=holdings_parse.HOLDING_COLUMNS))
 
-    # 3. resolve + decompose + aggregate ------------------------------------
     overrides = _load_constituent_overrides(_cfg_path(config, lt.overrides_file))
     exposures, fund_recon = lookthrough.build_effective_exposures(
         book, holdings, treatments, overrides,
         recon_tol=float(lt.reconciliation.weight_sum_tolerance), proxy_map=proxy_map)
 
-    # 4. reconcile (the Phase 3 sign-off invariant) -------------------------
     total = lookthrough.reconcile_total(exposures, book,
                                         tol=float(lt.reconciliation.total_tolerance))
     if not total["reconciled"]:
         return "error: look-through leaked weight (see log)"
     report = lookthrough.concentration_report(exposures, top_n=int(lt.report_top_n))
 
-    # 5. persist ------------------------------------------------------------
     run_date = ctx.started_at.strftime("%Y-%m-%d")
     asof_month = ctx.started_at.strftime("%Y-%m")
     if not holdings.empty:
@@ -179,7 +134,6 @@ def etf_lookthrough(config, ctx) -> str:
         "coverage_pct": round(100.0 * looked_mv / float(book["weight"].sum()), 2),
     }]))
 
-    # hand off to later phases
     ctx.artifacts["exposures"] = exposures
     ctx.artifacts["fund_recon"] = fund_recon
     ctx.artifacts["concentration"] = report

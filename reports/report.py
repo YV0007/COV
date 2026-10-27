@@ -1,12 +1,4 @@
-"""Phase 8 — the client-facing report (gather + render).
-
-Consolidates Phases 1-7 into one self-contained HTML file: the netted book, true-vs-
-declared concentration (Phase 3), correlation structure & the MP diagnostic (Phase 4),
-clusters-vs-sectors + absorption (Phase 5), economic factor exposure (Phase 6), and the
-risk budget + stress table (Phase 7). Charts are embedded as base64 so the file stands
-alone. Data is gathered from ``ctx.artifacts`` (the in-pipeline hand-off); each section
-renders only if its inputs are present, so a partial run still produces a partial report.
-"""
+# Phase 8 — the client-facing report (gather + render)
 
 from __future__ import annotations
 
@@ -35,7 +27,6 @@ def _records(df, n=None):
 
 
 def _trend_chart(storage, run_date, out_path) -> Path | None:
-    """Build the diversification-over-time chart from the rolling_diagnostics snapshot."""
     rd = storage.get_covariance("rolling_diagnostics", run_date)
     if rd.empty:
         return None
@@ -56,7 +47,6 @@ def _trend_chart(storage, run_date, out_path) -> Path | None:
 
 
 def gather(config, ctx) -> dict:
-    """Assemble the report data dict from ctx.artifacts (+ disk for plots/trend)."""
     a = ctx.artifacts
     run_date = ctx.started_at.strftime("%Y-%m-%d")
     out_dir = Path(config.paths.reports_out)
@@ -70,7 +60,6 @@ def gather(config, ctx) -> dict:
         "n_instruments": len(book) if book is not None else None,
     }}
 
-    # Phase 3 — look-through
     conc = a.get("concentration")
     if conc:
         recon = a.get("fund_recon")
@@ -79,7 +68,6 @@ def gather(config, ctx) -> dict:
         data["lookthrough"] = {"metrics": conc.get("metrics", {}), "coverage": cov,
                                "top": _records(conc.get("top_true"), 10)}
 
-    # Phase 4 — covariance
     cv = a.get("covariance", {}).get("full")
     if cv:
         data["covariance"] = {
@@ -87,7 +75,6 @@ def gather(config, ctx) -> dict:
             "trend_plot": _b64(_trend_chart(ctx.storage, run_date, out_dir / f"trend_{ctx.run_id}.png")),
         }
 
-    # Phase 5 — structure
     st = a.get("structure")
     if st:
         data["structure"] = {
@@ -96,14 +83,12 @@ def gather(config, ctx) -> dict:
             "dendrogram": _b64(st.get("dendrogram")), "absorption_plot": _b64(st.get("absorption_plot")),
         }
 
-    # Phase 6 — factor overlay
     fa = a.get("factors")
     if fa:
         data["factors"] = {"exposure": _records(fa.get("exposure")),
                            "naming": _records(fa.get("naming")),
                            "mean_r2": round(float(fa["r2"].mean()), 3) if "r2" in fa else None}
 
-    # Phase 7 — risk
     rk = a.get("risk")
     if rk:
         data["risk"] = {
@@ -116,7 +101,6 @@ def gather(config, ctx) -> dict:
 
 
 def render_report(data: dict, out_path) -> Path:
-    """Render the data dict to a self-contained HTML file. Pure — no I/O beyond the write."""
     html = Template(_TEMPLATE).render(d=data, pct=_pct, num=_num, usd=_usd)
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -125,7 +109,6 @@ def render_report(data: dict, out_path) -> Path:
 
 
 def generate_report(config, ctx) -> str:
-    """Phase 8 orchestrator: gather + render the consolidated report."""
     data = gather(config, ctx)
     out = Path(config.paths.reports_out) / "cov_report.html"
     render_report(data, out)
@@ -135,7 +118,6 @@ def generate_report(config, ctx) -> str:
     return f"ok: report with {len(sections)} sections -> {out}"
 
 
-# --- jinja helpers -----------------------------------------------------------
 def _pct(x, dp=2):
     try:
         return f"{float(x) * 100:.{dp}f}%"

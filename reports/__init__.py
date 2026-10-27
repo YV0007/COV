@@ -1,7 +1,4 @@
-"""Reports layer — Jinja templates and report generation.
-
-Home of Phase 8 (the scheduled client-facing report). Stub until built.
-"""
+# Reports layer — Jinja templates and report generation
 
 from __future__ import annotations
 

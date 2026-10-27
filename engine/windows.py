@@ -1,13 +1,4 @@
-"""Phase 4 — measuring at several speeds, the robustness ruler, and the MP plot.
-
-  6. windows   — full history, EWMA (λ=0.94), and a rolling time-series of diagnostics.
-  7. spearman  — a rank-based correlation as an outlier-immune cross-check.
-     (plot)    — the Marchenko-Pastur diagnostic: empirical spectrum vs the noise band.
-
-The three speeds are kept SEPARATE, never averaged: full history is the stable
-structural estimate (feeds Phase 5), EWMA/rolling are the dynamic view (trend +
-regime-warning). Their divergence is itself a signal.
-"""
+# Phase 4 — measuring at several speeds, the robustness ruler, and the MP plot
 
 from __future__ import annotations
 
@@ -20,16 +11,10 @@ import pandas as pd
 logger = logging.getLogger("cov.engine.windows")
 
 
-# --- EWMA (speed: reactive, smooth) -------------------------------------------
 def ewma_correlation(block: pd.DataFrame, lam: float = 0.94) -> pd.DataFrame:
-    """Exponentially-weighted correlation: recent days weigh most (half-life ~ln0.5/lnλ).
-
-    Weight on a day d rows back is ∝ λ^d; normalized so weights sum to 1. Reacts to
-    regime shifts without the hard cliff of a rolling window.
-    """
     x = block.values
     t = len(x)
-    ages = np.arange(t)[::-1]                    # newest row -> age 0
+    ages = np.arange(t)[::-1]
     w = (1 - lam) * lam ** ages
     w /= w.sum()
     mu = (w[:, None] * x).sum(axis=0)
@@ -41,19 +26,16 @@ def ewma_correlation(block: pd.DataFrame, lam: float = 0.94) -> pd.DataFrame:
     return pd.DataFrame(corr, index=block.columns, columns=block.columns)
 
 
-# --- rolling diagnostics over time (the "how diversification evolved" series) --
 def rolling_diagnostics(block: pd.DataFrame, window: int = 90, step: int = 21) -> pd.DataFrame:
-    """Time series of average pairwise correlation and effective rank over rolling
-    windows. Shows diversification collapsing in crises — impossible from one matrix."""
     idx = block.index
     rows = []
     for end in range(window, len(block) + 1, step):
         sub = block.iloc[end - window:end]
-        sub = sub.loc[:, sub.std(axis=0) > 0]          # drop flat cols (zero variance -> NaN corr)
+        sub = sub.loc[:, sub.std(axis=0) > 0]
         n = sub.shape[1]
         if n < 2:
             continue
-        c = np.nan_to_num(sub.corr().values, nan=0.0)   # belt-and-suspenders vs residual NaN
+        c = np.nan_to_num(sub.corr().values, nan=0.0)
         np.fill_diagonal(c, 1.0)
         offdiag = (c.sum() - n) / (n * (n - 1))
         vals = np.linalg.eigvalsh(c)
@@ -63,15 +45,8 @@ def rolling_diagnostics(block: pd.DataFrame, window: int = 90, step: int = 21) -
     return pd.DataFrame(rows)
 
 
-# --- Spearman robustness cross-check ------------------------------------------
 def spearman_agreement(block: pd.DataFrame, pearson: pd.DataFrame,
                        flag_threshold: float = 0.25) -> tuple[pd.DataFrame, dict]:
-    """Compare Pearson vs Spearman (rank) correlation; flag pairs that disagree.
-
-    Agreement => structure isn't outlier-driven. Divergence (|ΔP-S| > threshold) flags
-    a pair whose Pearson value is likely propped up by a few extreme days (or nonlinear).
-    Returns (top divergent pairs, summary stats).
-    """
     spear = block.corr(method="spearman")
     diff = (pearson - spear).abs()
     iu = np.triu_indices(len(diff), k=1)
@@ -90,9 +65,7 @@ def spearman_agreement(block: pd.DataFrame, pearson: pd.DataFrame,
     return top, stats
 
 
-# --- Marchenko-Pastur diagnostic plot -----------------------------------------
 def mp_density(lam: np.ndarray, q: float) -> np.ndarray:
-    """MP probability density for a pure-noise spectrum, for overlaying on the plot."""
     lam_minus, lam_plus = (1 - np.sqrt(q)) ** 2, (1 + np.sqrt(q)) ** 2
     inside = (lam >= lam_minus) & (lam <= lam_plus)
     dens = np.zeros_like(lam)
@@ -102,8 +75,6 @@ def mp_density(lam: np.ndarray, q: float) -> np.ndarray:
 
 
 def plot_mp_spectrum(vals: np.ndarray, q: float, out_path: Path, title: str = "") -> Path:
-    """Save the eigenvalue histogram with the MP noise band + density overlaid, and the
-    signal eigenvalues (above λ+) marked. The Phase-4 diagnostic deliverable."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt

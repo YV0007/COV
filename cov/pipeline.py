@@ -1,12 +1,4 @@
-"""End-to-end pipeline orchestrator.
-
-Runs every phase in order and logs the outcome of each. At Phase 0 all phase functions
-are stubs, so this is the "empty pipeline that runs end-to-end and writes a log"
-deliverable. As each phase is built, only its function body changes — the wiring here
-stays the same.
-
-Run with:  ``python -m cov.pipeline``
-"""
+# End-to-end pipeline orchestrator
 
 from __future__ import annotations
 
@@ -24,7 +16,6 @@ from engine import build_covariance, build_returns_matrix
 from reports import generate_report
 from resolution import etf_lookthrough, resolve_and_net_positions
 
-# A phase = (number, human name, callable). Callables take (config, ctx) -> status str.
 PhaseFn = Callable[[Config, "RunContext"], str]
 PHASES: list[tuple[int, str, PhaseFn]] = [
     (1, "Resolve & net positions", resolve_and_net_positions),
@@ -40,14 +31,6 @@ PHASES: list[tuple[int, str, PhaseFn]] = [
 
 @dataclass
 class RunContext:
-    """Shared state threaded through the phases.
-
-    Holds the run id, the shared :class:`~cov.storage.Storage` (the only door to disk),
-    and a free-form ``artifacts`` dict where each phase can deposit outputs (tables,
-    matrices, paths) for later phases to consume. Kept deliberately loose at Phase 0;
-    it will gain typed fields as the phases are built.
-    """
-
     run_id: str
     started_at: datetime
     storage: Storage
@@ -55,7 +38,6 @@ class RunContext:
 
 
 def run_pipeline(config: Config | None = None) -> RunContext:
-    """Execute all phases in order, logging each outcome. Returns the run context."""
     config = config or load_config()
     ensure_directories(config)
 
@@ -93,7 +75,6 @@ def run_pipeline(config: Config | None = None) -> RunContext:
 
 
 def main() -> None:
-    """Console-script / ``python -m cov.pipeline`` entry point."""
     run_pipeline()
 
 

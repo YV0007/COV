@@ -1,17 +1,4 @@
-"""Phase 5 — structure detection (the core-insight maths).
-
-Turns Phase 4's clean, market-removed correlation matrix into the human-readable answer
-to the project's central question: how many real groups does the book contain, which
-holdings secretly co-move, and where does behaviour disagree with the declared sectors.
-
-  PCA (interpret)   — read the detoned eigenvectors: which holdings drive each factor.
-  clustering        — correlation distance sqrt(2(1-rho)) + Ward linkage -> a tree.
-  sector confusion  — data clusters vs the ~20 declared sectors: agreement + the mislabels.
-  absorption ratio  — top-N eigenvalue share over time (systemic-risk / fragility dial).
-
-Nothing here reduces or projects the data away: the full N×N matrix is used so every
-holding keeps its identity for clustering and attribution.
-"""
+# Phase 5 — structure detection (the core-insight maths)
 
 from __future__ import annotations
 
@@ -24,10 +11,7 @@ import pandas as pd
 logger = logging.getLogger("cov.analytics.structure")
 
 
-# --- PCA interpretation (read Phase 4's eigenvectors) -------------------------
 def pca_factors(corr: pd.DataFrame, sectors: dict, n: int = 12, top_k: int = 7) -> pd.DataFrame:
-    """For the top ``n`` factors of ``corr`` (detoned), list the heaviest-loading holdings
-    and their dominant declared sector — i.e. name each 'dial' by what drives it."""
     from engine.covariance import eigidecompose
     vals, vecs = eigidecompose(corr)
     total = float(vals.sum())
@@ -47,21 +31,14 @@ def pca_factors(corr: pd.DataFrame, sectors: dict, n: int = 12, top_k: int = 7) 
     return pd.DataFrame(rows)
 
 
-# --- correlation distance + hierarchical clustering ---------------------------
 def correlation_distance(corr: pd.DataFrame) -> pd.DataFrame:
-    """The metric d = sqrt(2(1-rho)): rho=1 -> 0, rho=0 -> sqrt2, rho=-1 -> 2."""
     d = np.sqrt(np.clip(2.0 * (1.0 - corr.values), 0.0, None))
     np.fill_diagonal(d, 0.0)
-    d = 0.5 * (d + d.T)                                    # enforce symmetry
+    d = 0.5 * (d + d.T)
     return pd.DataFrame(d, index=corr.index, columns=corr.columns)
 
 
 def hierarchical_clusters(corr: pd.DataFrame, method: str = "ward", k: int = 8):
-    """Ward-linkage agglomerative clustering on the correlation distance.
-
-    Returns (linkage matrix Z, cluster-label Series). ``k`` clusters are cut from the tree
-    with ``fcluster`` (maxclust). Z drives the dendrogram plot.
-    """
     from scipy.cluster.hierarchy import linkage, fcluster
     from scipy.spatial.distance import squareform
     condensed = squareform(correlation_distance(corr).values, checks=False)
@@ -70,13 +47,7 @@ def hierarchical_clusters(corr: pd.DataFrame, method: str = "ward", k: int = 8):
     return z, pd.Series(labels, index=corr.index, name="cluster")
 
 
-# --- data clusters vs declared sectors ---------------------------------------
 def sector_confusion(clusters: pd.Series, sectors: dict):
-    """Cross-tab data-driven clusters against declared sectors; agreement + the mislabels.
-
-    Returns (confusion DataFrame, stats dict, per-holding frame flagging holdings that do
-    NOT sit in the majority cluster of their declared sector = behaviourally divergent).
-    """
     from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
     df = pd.DataFrame({"cluster": clusters,
                        "sector": pd.Series(sectors).reindex(clusters.index)}).dropna()
@@ -92,10 +63,7 @@ def sector_confusion(clusters: pd.Series, sectors: dict):
     return conf, stats, df.reset_index(names="instrument")
 
 
-# --- absorption ratio (systemic-risk dial) -----------------------------------
 def absorption_ratio(eigenvalues: np.ndarray, top_n: int = 5) -> float:
-    """Fraction of total variance captured by the top-N eigenvectors (Kritzman 2010).
-    High = tightly coupled / fragile; low = variance spread across many factors."""
     v = np.sort(np.asarray(eigenvalues, dtype=float))[::-1]
     s = v.sum()
     return float(v[:top_n].sum() / s) if s else float("nan")
@@ -103,7 +71,6 @@ def absorption_ratio(eigenvalues: np.ndarray, top_n: int = 5) -> float:
 
 def rolling_absorption(block: pd.DataFrame, top_n: int = 5,
                        window: int = 252, step: int = 21) -> pd.DataFrame:
-    """Absorption ratio over rolling windows — the systemic-fragility trend."""
     idx = block.index
     rows = []
     for end in range(window, len(block) + 1, step):
@@ -119,15 +86,12 @@ def rolling_absorption(block: pd.DataFrame, top_n: int = 5,
     return pd.DataFrame(rows)
 
 
-# --- plots -------------------------------------------------------------------
 def plot_dendrogram(z, labels, k: int, out_path: Path, title: str = "") -> Path:
-    """Save the clustering dendrogram, coloured at the k-cluster cut."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from scipy.cluster.hierarchy import dendrogram
 
-    # colour threshold = the merge height that yields k clusters
     heights = np.sort(z[:, 2])
     thresh = heights[-(k - 1)] if k > 1 and k <= len(heights) else None
     fig, ax = plt.subplots(figsize=(12, 5))
@@ -144,7 +108,6 @@ def plot_dendrogram(z, labels, k: int, out_path: Path, title: str = "") -> Path:
 
 
 def plot_absorption(series: pd.DataFrame, out_path: Path, title: str = "") -> Path:
-    """Save the absorption-ratio-over-time chart (systemic fragility trend)."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt

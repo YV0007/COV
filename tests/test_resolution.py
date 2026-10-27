@@ -1,9 +1,4 @@
-"""Tests for Phase 1 — ingestion, entity resolution, netting, reconciliation.
-
-The reconciliation-invariant and merge tests run the whole phase against the real
-audit CSV (read-only), but repoint all *writable* data paths into tmp_path so no
-test touches the real ``data/`` snapshots or warehouse.
-"""
+# Tests for Phase 1 — ingestion, entity resolution, netting, reconciliation
 
 from __future__ import annotations
 
@@ -17,10 +12,8 @@ from cov.storage import Storage
 from resolution import entity, ingest, netting, resolve_and_net_positions
 
 
-# --- fixtures ----------------------------------------------------------------
 @pytest.fixture
 def cfg_tmp(tmp_path):
-    """Real config, but every writable data path repointed under tmp_path."""
     cfg = load_config()
     new_paths = {}
     for key, value in cfg.paths.to_dict().items():
@@ -29,8 +22,6 @@ def cfg_tmp(tmp_path):
     cfg.paths._data = new_paths
     for k, v in new_paths.items():
         setattr(cfg.paths, k, v)
-    # Read from the deterministic Phase-1 fixture (fake data engineered to hit every
-    # case), not the live config's portfolio — so the suite is self-contained.
     cfg.ingestion.input_file = "tests/fixtures/positions_test.csv"
     cfg.ingestion.overrides_file = "tests/fixtures/entity_overrides_test.yaml"
     return cfg
@@ -38,7 +29,6 @@ def cfg_tmp(tmp_path):
 
 @pytest.fixture
 def book(cfg_tmp):
-    """Run the full Phase 1 against the real CSV; return (book, ctx)."""
     from cov.pipeline import RunContext
 
     storage = Storage(cfg_tmp)
@@ -55,13 +45,11 @@ def _row(book, cid):
     return hits.iloc[0]
 
 
-# --- ingestion / normalization ----------------------------------------------
 def test_split_exchange_colon_prefix():
     prefixes = {"ETR", "ASX", "HKG"}
     assert ingest._split_exchange("etr:IFX", prefixes) == ("IFX", "ETR")
     assert ingest._split_exchange("ASX:LYC", prefixes) == ("LYC", "ASX")
     assert ingest._split_exchange("HKG:1913", prefixes) == ("1913", "HKG")
-    # A bare ticker (no colon) is never split, even if it equals a prefix code.
     assert ingest._split_exchange("CVE", prefixes) == ("CVE", None)
 
 
@@ -72,7 +60,6 @@ def test_parse_fee():
     assert ingest._parse_fee(None) is None
 
 
-# --- the Phase 1 sign-off: reconciliation invariant --------------------------
 def test_reconciliation_invariant_to_the_cent(book):
     b, ctx = book
     assert int(b["market_value_usd"].sum()) == 4_632_000
@@ -85,11 +72,10 @@ def test_weights_sum_to_one(book):
     assert b["weight"].sum() == pytest.approx(1.0, abs=1e-9)
 
 
-# --- entity resolution: the baked-in cases -----------------------------------
 def test_asml_dual_isin_merges_and_sums_shares(book):
     b, _ = book
     asml = _row(b, "ASML")
-    assert asml["quantity"] == 235          # 145 (NL) + 90 (US ADR, 1:1)
+    assert asml["quantity"] == 235
     assert asml["contributing_raw_ids"] == "19,20"
     assert "NL0010273215" in asml["isins"] and "USN070592100" in asml["isins"]
 
@@ -98,9 +84,9 @@ def test_ibit_cbtc_net_to_one_bitcoin_shares_not_additive(book):
     b, _ = book
     btc = _row(b, "BTC")
     ids = set(btc["contributing_raw_ids"].split(","))
-    assert {"218", "220"} <= ids           # IBIT (218) + CBTC (220)
-    assert pd.isna(btc["quantity"])         # wrapper shares are not additive
-    assert btc["is_fund"]                   # held via ETP wrappers
+    assert {"218", "220"} <= ids
+    assert pd.isna(btc["quantity"])
+    assert btc["is_fund"]
     assert "US46438F1012" in b[b["canonical_id"] == "BTC"].iloc[0]["isins"]
 
 
@@ -110,7 +96,7 @@ def test_boeing_and_bae_stay_separate(book):
     bae = _row(b, "BAE")
     assert boeing["isins"] == "US0970231058"
     assert bae["isins"] == "GB0002634946"
-    assert bae["quantity"] == 3035 + 1821   # BAE netted across UBS + LLB
+    assert bae["quantity"] == 3035 + 1821
 
 
 def test_bmw_share_classes_stay_separate(book):
@@ -122,7 +108,7 @@ def test_bmw_share_classes_stay_separate(book):
 def test_googl_nets_across_custodians(book):
     b, _ = book
     googl = _row(b, "GOOGL")
-    assert googl["quantity"] == 8000        # 7500 (UBS) + 500 (LLB)
+    assert googl["quantity"] == 8000
     assert googl["contributing_raw_ids"] == "1,2"
 
 
@@ -135,8 +121,8 @@ def test_coin_is_equity_not_crypto(book):
 
 def test_fund_flagging(book):
     b, _ = book
-    assert _row(b, "CSPX")["is_fund"]       # iShares Core S&P 500 ETF (has fee)
-    assert _row(b, "GDX")["is_fund"]        # VanEck Gold Miners ETF
+    assert _row(b, "CSPX")["is_fund"]
+    assert _row(b, "GDX")["is_fund"]
 
 
 def test_data_quality_notes_surfaced(book):
@@ -154,9 +140,7 @@ def test_snapshot_and_reference_tables_written(book):
     assert (meta["currency"] == "USD").all()
 
 
-# --- collision guard ---------------------------------------------------------
 def test_collision_guard_fires_on_undeclared_ticker_collision():
-    # Two different ISINs, same ticker slug, no override -> must raise.
     df = pd.DataFrame({
         "raw_id": [1, 2],
         "custodian": ["UBS", "UBS"],

@@ -1,27 +1,18 @@
-# =============================================================================
-# EXAMPLE entity-resolution overrides — for the shipped example portfolio.
-# Copy to config/entity_overrides.yaml (gitignored) and edit for your own book.
-# Default resolution groups rows by ISIN (else normalized ticker); this file
-# encodes the exceptions that rule gets wrong.
-# =============================================================================
+# EXAMPLE entity-resolution overrides — for the shipped example portfolio
 
-# --- merges: distinct source lines that are the SAME economic exposure --------
 merges:
   ASML:
     canonical_id: ASML
     canonical_name: ASML Holding NV
     instrument_type: equity
-    match_isin: [USN070592100, NL0010273215]     # US ADR + Amsterdam ordinary (1:1)
+    match_isin: [USN070592100, NL0010273215]
     shares_additive: true
     note: "US ADR + Amsterdam ordinary — one economic exposure"
 
-# --- renames: break a canonical_id (ticker slug) collision --------------------
 renames: []
 
-# --- keep_separate: must NOT merge (share classes, overloaded tickers) ---------
 keep_separate:
-  - isins: [US02079K3059, US02079K1079]           # Alphabet Class A vs Class C
+  - isins: [US02079K3059, US02079K1079]
     reason: "Different share classes (GOOGL vs GOOG) — distinct instruments"
 
-# --- data_quality_notes: known bad/suspect rows a human flagged ---------------
 data_quality_notes: {}

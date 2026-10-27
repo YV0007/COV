@@ -1,15 +1,4 @@
-"""Phase 2, step 4 — per-instrument data-quality gates.
-
-Nothing is dropped; everything is scored and *flagged* so later phases can decide.
-Four gates (thresholds in config ``prices.quality_gates`` / ``min_history_days``):
-
-  * **history** — fewer than ``min_history_days`` observations (short names: ARM, ETHA…).
-  * **missing** — >max_missing_pct of business days in the covered span have no price.
-  * **stale**   — a run of >= stale_price_days identical consecutive USD closes.
-  * **outliers**— returns beyond ``outlier_sigma`` of a rolling 21-day mean/std.
-
-Output matches the ``data_quality_flags`` DuckDB schema.
-"""
+# Phase 2, step 4 — per-instrument data-quality gates
 
 from __future__ import annotations
 
@@ -22,7 +11,6 @@ logger = logging.getLogger("cov.engine.quality")
 
 
 def _max_identical_run(s: pd.Series) -> int:
-    """Longest run of identical consecutive values (stale-price detector)."""
     if s.empty:
         return 0
     changed = s.ne(s.shift()).cumsum()
@@ -36,7 +24,6 @@ def quality_report(
     gates,
     min_history_days: int,
 ) -> pd.DataFrame:
-    """One row per instrument matching ``data_quality_flags`` (+ a ``reasons`` note)."""
     max_missing = float(gates.max_missing_pct)
     stale_days = int(gates.stale_price_days)
     sigma = float(gates.outlier_sigma)
@@ -51,10 +38,8 @@ def quality_report(
         r = ret_by_id.get(cid, pd.DataFrame(columns=["date", "return"]))
         history_days = len(r)
 
-        # missing days vs a business-day calendar over the covered span
         if len(px) >= 2:
             span = pd.bdate_range(px["date"].min(), px["date"].max())
-            # clamp at 0: crypto trades 7d/wk so obs can exceed business days
             missing_pct = round(max(0.0, 100.0 * (1 - len(px) / max(len(span), 1))), 2)
         else:
             missing_pct = 100.0

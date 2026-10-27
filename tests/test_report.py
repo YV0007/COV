@@ -1,8 +1,4 @@
-"""Phase 8 tests — the HTML renderer (pure) and its formatting helpers.
-
-Offline: render a fixture data dict and assert the sections/values appear; assert absent
-sections are omitted (a partial run yields a partial report).
-"""
+# Phase 8 tests — the HTML renderer (pure) and its formatting helpers
 
 from __future__ import annotations
 
@@ -33,22 +29,22 @@ def test_render_includes_present_sections(tmp_path):
     html = out.read_text()
     assert "COV — Portfolio Structure" in html
     assert "$50,000,000" in html
-    assert "True vs Declared Exposure" in html      # lookthrough section present
-    assert "Apple" in html and "1.66%" in html       # true-weight rendered
+    assert "True vs Declared Exposure" in html
+    assert "Apple" in html and "1.66%" in html
     assert "Risk Budget" in html
     assert "AMD" in html and "17.10%" in html
-    assert "2.02x" in html                            # stress tail
+    assert "2.02x" in html
 
 
 def test_render_omits_absent_sections(tmp_path):
     out = rp.render_report(_fixture(), tmp_path / "r.html")
     html = out.read_text()
-    assert "Correlation Structure" not in html       # no covariance data -> section omitted
-    assert "Economic Factor Exposure" not in html    # no factors data -> omitted
+    assert "Correlation Structure" not in html
+    assert "Economic Factor Exposure" not in html
 
 
 def test_format_helpers():
     assert rp._pct(0.0166) == "1.66%"
     assert rp._usd(50000000) == "$50,000,000"
     assert rp._num(0.149, 1) == "0.1"
-    assert rp._pct(None) == "—"                        # graceful on missing
+    assert rp._pct(None) == "—"
